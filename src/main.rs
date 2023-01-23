@@ -2,6 +2,8 @@ use std::collections::LinkedList;
 use std::process::{Command, Stdio};
 use std::fs;
 use std::env;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 fn readentry(path: fs::DirEntry, parent: &String, taskqueue: &mut LinkedList<String>){
     let path_type = path.file_type().unwrap();
@@ -29,7 +31,7 @@ fn readentry(path: fs::DirEntry, parent: &String, taskqueue: &mut LinkedList<Str
     }
 }
 
-fn navigate(mut taskqueue: LinkedList<String>){    
+fn navigate(taskqueue: &mut LinkedList<String>){    
     while taskqueue.len() != 0 {
         let task = taskqueue.pop_front().unwrap();
         let paths = fs::read_dir(&task).unwrap();
@@ -37,9 +39,8 @@ fn navigate(mut taskqueue: LinkedList<String>){
         println!("[0] DIR {}", task);
 
         for path in paths{
-            readentry(path.unwrap(), &task, &mut taskqueue);
+            readentry(path.unwrap(), &task, taskqueue);
         }
-
     }
 }
 
@@ -47,8 +48,22 @@ fn main() {
     
     let mut taskqueue: LinkedList<String> = LinkedList::new();
 
-    taskqueue.push_back(format!("{}/{}", env::current_dir().unwrap().to_str().unwrap(), String::from("testdir")));
+    let cwd_buff = env::current_dir().unwrap();
+    let cwd = cwd_buff.to_str().unwrap();
 
-    navigate(taskqueue);
+    taskqueue.push_back(format!("{}/{}", cwd, String::from("testdir")));
+
+    let tasks: Mutex<LinkedList<String>> = Mutex::new(taskqueue);
+
+    let reference_counter = Arc::new(tasks);
+
+    for _ in 0..10{
+        let tasks = Arc::clone(&reference_counter);
+        
+        
+    }
+    
+
+    navigate(&mut taskqueue);
 
 }
